@@ -571,7 +571,7 @@ Log-Msg -Type Info -MSG "Getting PVWA Credentials to start Onboarding Accounts" 
 			$account.disableAutoMgmt = $false
 		}
 		# Check if there are custom properties
-		$customProps = $($account.PSObject.Properties | Where { $_.Name -notin "username","address","safe","platformID","password","disableAutoMgmt","disableAutoMgmtReason","groupName","groupPlatformID" })
+		$customProps = $($account.PSObject.Properties | Where { $_.Name -notin "username","oldUsername","address","safe","platformID","password","disableAutoMgmt","disableAutoMgmtReason","groupName","groupPlatformID" })
 		if($customProps -ne $null)
 		{
 			$account | Add-Member properties @()
@@ -612,14 +612,19 @@ Log-Msg -Type Info -MSG "Getting PVWA Credentials to start Onboarding Accounts" 
 		{
 			# Check if the Account exists
 			$accExists = $(Test-Account -safeName $account.Safe -accountName $account.username -accountAddress $accountAddress)
-			
+			$updateUsername = ($Update -and !$accExists -and (![string]::IsNullOrEmpty($account.oldUsername)))
+			If ($updateUsername){
+				$accExists = $(Test-Account -safeName $account.Safe -accountName $account.oldUsername -accountAddress $accountAddress)
+			}
+
 			try{
 				If($accExists)
 				{
 					If($Update)
 					{
 						# Get Existing Account Details
-						$s_Account = $(Get-Account -safeName $account.Safe -accountName $account.username -accountAddress $accountAddress)
+						$usernameToUpdate = If($updateUsername) {$account.oldUsername} Else {$account.username}
+						$s_Account = $(Get-Account -safeName $account.Safe -accountName $accountToUpdate -accountAddress $accountAddress)
 						
 						# Create the Account to update with current properties
 						$updateAccount = "" | select Safe,Folder,PlatformID,Address,UserName,DeviceType,AccountName,Properties
@@ -672,7 +677,7 @@ Log-Msg -Type Info -MSG "Getting PVWA Credentials to start Onboarding Accounts" 
 								$updateAccount.AccountName = $sProp.Value
 								If(![string]::IsNullOrEmpty($account.AccountName) -and $account.AccountName -ne $updateAccount.AccountName)
 								{
-									$updateAccount.AccountName = $account.AccountName	
+									$updateAccount.AccountName = $account.AccountName
 								}
 							}
 							elseif($sProp.Key -eq "UserName")
@@ -680,7 +685,7 @@ Log-Msg -Type Info -MSG "Getting PVWA Credentials to start Onboarding Accounts" 
 								$updateAccount.UserName = $sProp.Value
 								If(![string]::IsNullOrEmpty($account.UserName) -and $account.UserName -ne $updateAccount.UserName)
 								{
-									$updateAccount.UserName = $account.UserName	
+									$updateAccount.UserName = $account.UserName
 								}
 							}
 							else
