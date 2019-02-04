@@ -19,6 +19,7 @@
 # 1.9 21/12/2017 - Fixed Template Safe creation and owner permissions
 # 2.0 26/12/2017 - Support for Creating/Updating custom account properties
 # 2.1 02/01/2018 - Reduce errors from Template Safe creation (Ignore default users)
+# 2.2 02/04/2019 - support for renaming accounts
 #
 ###########################################################################
 [CmdletBinding(DefaultParametersetName="Create")]
