@@ -12,6 +12,7 @@
 #
 # VERSION HISTORY:
 # 1.0 26/06/2018 - Initial release
+# 1.1 04/02/2019 - Support for renaming accounts
 #
 ###########################################################################
 [CmdletBinding(DefaultParametersetName="Create")]
@@ -588,14 +589,15 @@ Log-Msg -Type Info -MSG "Getting PVWA Credentials to start Onboarding Accounts" 
 				$account.enableAutoMgmt = $false
 			}
 			# Check if there are custom properties
-			$excludedProperties = @("name","username","address","safe","platformid","password","sshkey","enableautomgmt","manualmgmtreason","groupname","groupplatformid","remotemachineaddresses","restrictmachineaccesstolist")
+			$excludedProperties = @("name","username","oldUsername","address","safe","platformid","password","sshkey","enableautomgmt","manualmgmtreason","groupname","groupplatformid","remotemachineaddresses","restrictmachineaccesstolist")
 			$customProps = $($account.PSObject.Properties | Where { $_.Name.ToLower() -notin $excludedProperties })
 			#region [Account object mapping]
 			# Convert Account from CSV to Account Object (properties mapping)
-			$objAccount = "" | Select "name", "address", "userName", "platformId", "safeName", "secretType", "secret", "platformAccountProperties", "secretManagement", "remoteMachinesAccess"
+			$objAccount = "" | Select "name", "address", "userName", "oldUsername", "platformId", "safeName", "secretType", "secret", "platformAccountProperties", "secretManagement", "remoteMachinesAccess"
 			$objAccount.platformAccountProperties = $null
 			$objAccount.secretManagement = "" | Select "automaticManagementEnabled", "manualManagementReason"
 			$objAccount.name = $account.name
+      $objAccount.oldUsername = $account.oldUsername
 			$objAccount.address = $account.address
 			$objAccount.userName = $account.userName
 			$objAccount.platformId = $account.platformID
@@ -670,6 +672,10 @@ Log-Msg -Type Info -MSG "Getting PVWA Credentials to start Onboarding Accounts" 
 			{
 				# Check if the Account exists
 				$accExists = $(Test-Account -safeName $objAccount.safeName -accountName $objAccount.userName -accountAddress $objAccount.Address)
+        $updateUsername = ($Update -and !$accExists -and (![string]::IsNullOrEmpty($account.oldUsername)))
+			  If ($updateUsername){
+				  $accExists = $(Test-Account -safeName $objAccount.safeName -accountName $objAccount.oldUsername -accountAddress $objAccount.Address)
+			  }
 				
 				try{
 					If($Create)
@@ -681,7 +687,8 @@ Log-Msg -Type Info -MSG "Getting PVWA Credentials to start Onboarding Accounts" 
 						If($Update)
 						{
 							# Get Existing Account Details
-							$s_Account = $(Get-Account -safeName $objAccount.safeName -accountName $objAccount.userName -accountAddress $objAccount.Address)
+              $usernameToUpdate = If($updateUsername) {$objAccount.oldUsername} Else {$objAccount.userName}
+							$s_Account = $(Get-Account -safeName $objAccount.safeName -accountName $usernameToUpdate -accountAddress $objAccount.Address)
 							$s_AccountBody = @()
 							Foreach($sProp in $s_Account.Properties)
 							{
